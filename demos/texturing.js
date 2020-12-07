@@ -125,7 +125,7 @@ async function loadTexture(fileName) {
 }
 
 (async () => {
-    const tex = await loadTexture("abstract.jpg");
+    const tex = await loadTexture("pepe.png");
     let drawCall = app.createDrawCall(program, vertexArray)
         .texture("tex", app.createTexture2D(tex, tex.width, tex.height, {
             magFilter: PicoGL.LINEAR,
@@ -137,12 +137,12 @@ async function loadTexture(fileName) {
 
     let skyboxDrawCall = app.createDrawCall(skyboxProgram, skyboxArray)
         .texture("cubemap", app.createCubemap({
-            negX: await loadTexture("stormydays_bk.png"),
-            posX: await loadTexture("stormydays_ft.png"),
-            negY: await loadTexture("stormydays_dn.png"),
-            posY: await loadTexture("stormydays_up.png"),
-            negZ: await loadTexture("stormydays_lf.png"),
-            posZ: await loadTexture("stormydays_rt.png")
+            negX: await loadTexture("stormydays_ft.png"),
+            posX: await loadTexture("stormydays_dn.png"),
+            negY: await loadTexture("stormydays_up.png"),
+            posY: await loadTexture("stormydays_dn.png"),
+            negZ: await loadTexture("stormydays_rt.png"),
+            posZ: await loadTexture("stormydays_lf.png")
         }));
 
     let startTime = new Date().getTime() / 1000;
@@ -156,8 +156,8 @@ async function loadTexture(fileName) {
         mat4.lookAt(viewMatrix, camPos, vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
         mat4.multiply(viewProjMatrix, projMatrix, viewMatrix);
 
-        mat4.fromXRotation(rotateXMatrix, time * 0.1136);
-        mat4.fromZRotation(rotateYMatrix, time * 0.2235);
+        mat4.fromXRotation(rotateXMatrix, time * 0.8);
+        mat4.fromZRotation(rotateYMatrix, time * 0.8);
         mat4.multiply(modelMatrix, rotateXMatrix, rotateYMatrix);
 
         mat4.multiply(modelViewMatrix, viewMatrix, modelMatrix);
