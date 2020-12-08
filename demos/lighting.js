@@ -7,12 +7,51 @@ import {positions, normals, indices} from "../blender/monkey.js"
 // **               Light configuration                **
 // ******************************************************
 
-let ambientLightColor = vec3.fromValues(0.05, 0.05, 0.1);
+let ambientLightColor = vec3.fromValues(0.23, 0.1, 0.23);
 let numberOfLights = 2;
 let lightColors = [vec3.fromValues(1.0, 0.0, 0.2), vec3.fromValues(0.0, 0.1, 0.2)];
 let lightInitialPositions = [vec3.fromValues(5, 0, 2), vec3.fromValues(-5, 0, 2)];
 let lightPositions = [vec3.create(), vec3.create()];
+const skyboxPositions = new Float32Array([
+    -1.0, 1.0, 1.0,
+    1.0, 1.0, 1.0,
+    -1.0, -1.0, 1.0,
+    1.0, -1.0, 1.0
+]);
 
+const skyboxIndices = new Uint16Array([
+    0, 2, 1,
+    2, 3, 1
+]);
+
+let skyboxFragmentShader = `
+    #version 300 es
+    precision mediump float;
+    
+    uniform samplerCube cubemap;
+    uniform mat4 viewProjectionInverse;
+    in vec4 v_position;
+    
+    out vec4 outColor;
+    
+    void main() {
+      vec4 t = viewProjectionInverse * v_position;
+      outColor = texture(cubemap, normalize(t.xyz / t.w));
+    }
+`;
+
+// language=GLSL
+let skyboxVertexShader = `
+    #version 300 es
+    
+    layout(location=0) in vec4 position;
+    out vec4 v_position;
+    
+    void main() {
+      v_position = position;
+      gl_Position = position;
+    }
+`;
 
 // language=GLSL
 let lightCalculationShader = `
@@ -96,6 +135,7 @@ app.enable(PicoGL.DEPTH_TEST)
    .enable(PicoGL.CULL_FACE);
 
 let program = app.createProgram(vertexShader.trim(), fragmentShader.trim());
+let skyboxProgram = app.createProgram(skyboxVertexShader.trim(), skyboxFragmentShader.trim());
 
 let vertexArray = app.createVertexArray()
     .vertexAttributeBuffer(0, app.createVertexBuffer(PicoGL.FLOAT, 3, positions))
@@ -107,16 +147,42 @@ let viewMatrix = mat4.create();
 let viewProjectionMatrix = mat4.create();
 let modelMatrix = mat4.create();
 
+let skyboxArray = app.createVertexArray()
+    .vertexAttributeBuffer(0, app.createVertexBuffer(PicoGL.FLOAT, 3, skyboxPositions))
+    .indexBuffer(app.createIndexBuffer(PicoGL.UNSIGNED_SHORT, 3, skyboxIndices));
+
 let drawCall = app.createDrawCall(program, vertexArray)
     .uniform("ambientLightColor", ambientLightColor);
 
 let startTime = new Date().getTime() / 1000;
 
-let cameraPosition = vec3.fromValues(0, 0, 5);
-mat4.fromXRotation(modelMatrix, -Math.PI / 2);
+let cameraPosition = vec3.fromValues(0, 0, 8);
+mat4.fromXRotation(modelMatrix, -Math.PI / 6);
 
 const positionsBuffer = new Float32Array(numberOfLights * 3);
 const colorsBuffer = new Float32Array(numberOfLights * 3);
+(async () => {
+    const tex = await loadTexture("pepe.png");
+    let drawCall = app.createDrawCall(program, vertexArray)
+        .texture("tex", app.createTexture2D(tex, tex.width, tex.height, {
+            magFilter: PicoGL.LINEAR,
+            minFilter: PicoGL.LINEAR_MIPMAP_LINEAR,
+            maxAnisotropy: 10,
+            wrapU: PicoGL.REPEAT,
+            wrapV: PicoGL.REPEAT
+        }));
+
+    let skyboxDrawCall = app.createDrawCall(skyboxProgram, skyboxArray)
+        .texture("cubemap", app.createCubemap({
+            negX: await loadTexture("stormydays_ft.png"),
+            posX: await loadTexture("stormydays_dn.png"),
+            negY: await loadTexture("stormydays_up.png"),
+            posY: await loadTexture("stormydays_dn.png"),
+            negZ: await loadTexture("stormydays_rt.png"),
+            posZ: await loadTexture("stormydays_lf.png")
+        }));
+
+    let startTime = new Date().getTime() / 1000;
 
 function draw() {
     let time = new Date().getTime() / 1000 - startTime;
@@ -134,7 +200,9 @@ function draw() {
         positionsBuffer.set(lightPositions[i], i * 3);
         colorsBuffer.set(lightColors[i], i * 3);
     }
-
+    let skyboxViewProjectionMatrix = mat4.create();
+    mat4.mul(skyboxViewProjectionMatrix, projMatrix, viewMatrix);
+    mat4.invert(skyboxViewProjectionInverse, skyboxViewProjectionMatrix);
     drawCall.uniform("lightPositions[0]", positionsBuffer);
     drawCall.uniform("lightColors[0]", colorsBuffer);
 
@@ -144,3 +212,4 @@ function draw() {
     requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
+}
