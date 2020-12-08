@@ -131,8 +131,8 @@ async function loadTexture(fileName) {
             magFilter: PicoGL.LINEAR,
             minFilter: PicoGL.LINEAR_MIPMAP_LINEAR,
             maxAnisotropy: 10,
-            wrapS: PicoGL.REPEAT,
-            wrapT: PicoGL.REPEAT
+            wrapU: PicoGL.REPEAT,
+            wrapV: PicoGL.REPEAT
         }));
 
     let skyboxDrawCall = app.createDrawCall(skyboxProgram, skyboxArray)
